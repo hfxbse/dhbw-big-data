@@ -1,0 +1,2 @@
+FROM marcelmittelstaedt/airflow:latest
+RUN sed -i '3 i service ssh start' /startup.sh
