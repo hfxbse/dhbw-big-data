@@ -87,11 +87,11 @@ def initial_data(dag):
 
 
 with cell_coverage_dag() as dag:
-    load_initial_data = HdfsGetFileOperator(
+    check_for_initial_data = HdfsGetFileOperator(
         task_id='load-initial-data',
         hdfs_conn_id='hdfs',
         remote_file=f'{RAW_DIRECTORY_PATH}/cell_towers.csv',
-        local_file=f'{TMP_DIR}/cell_towers.csv',
+        local_file='/dev/null',
     )
 
     download_initial_data = DummyOperator(
@@ -112,6 +112,6 @@ with cell_coverage_dag() as dag:
 
     download_initial_start, download_initial_end = initial_data(dag)
 
-    create_tmp_dir >> clear_tmp_dir >> load_initial_data >> download_initial_data
+    create_tmp_dir >> clear_tmp_dir >> check_for_initial_data >> download_initial_data
 
     download_initial_data >> download_initial_start
