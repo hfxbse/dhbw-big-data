@@ -1,14 +1,20 @@
-from airflow import DAG
+import gzip
+import os
+
+import requests
+from airflow import DAG, AirflowException
 from airflow.models import Variable
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.http_download_operations import HttpDownloadOperator
+from airflow.operators.python_operator import PythonOperator
 from airflow.operators.zip_file_operations import UnzipFileOperator
 from airflow.operators.hdfs_operations import HdfsPutFileOperator, HdfsGetFileOperator, HdfsMkdirFileOperator
-from airflow.operators.filesystem_operations import ClearDirectoryOperator
+from airflow.operators.hdfs_premium_operations import HdfsPutFilesOperator
 from datetime import datetime
 
 from airflow.utils.trigger_rule import TriggerRule
+from future.backports.datetime import timedelta
 
 args = {
     'owner': 'airflow'
@@ -30,6 +36,81 @@ def cell_coverage_dag():
 RAW_DIRECTORY_PATH = '/user/hadoop/cell-coverage/raw'
 DIFF_DIRECTORY_PATH = f'{RAW_DIRECTORY_PATH}/diffs'
 TMP_DIR = '/tmp/cell-coverage'
+OPEN_CELL_API_KEY = Variable.get("OPEN_CELL_ID_API_KEY")
+
+
+# noinspection PyShadowingNames
+def put_timestamp(task_id, dag):
+    return HdfsPutFileOperator(
+        task_id=task_id,
+        hdfs_conn_id='hdfs',
+        local_file=f'{TMP_DIR}/timestamp',
+        remote_file=f'{RAW_DIRECTORY_PATH}/timestamp',
+        dag=dag
+    )
+
+
+# noinspection PyShadowingNames
+def download_diffs(dag):
+    def download_since_last_timestamp():
+        now = datetime.now()
+        patch_date = now
+
+        with open(f'{TMP_DIR}/timestamp', 'r') as timestamp:
+            update_time = datetime.strptime(timestamp.read(), '%Y-%m-%d\n')
+
+        os.makedirs(f'{TMP_DIR}/diffs', exist_ok=True)
+
+        with open(f'{TMP_DIR}/diffs/updates', 'w') as dates:
+            while patch_date > (update_time + timedelta(days=1)):
+                date = patch_date.strftime('%Y-%m-%d')
+                dates.writelines(f'{date}\n')
+
+                try:
+                    response = requests.get(
+                        f'https://opencellid.org/ocid/downloads?'
+                        f'token={OPEN_CELL_API_KEY}&'
+                        f'type=diff&'
+                        f'file=OCID-diff-cell-export-{date}-T000000.csv.gz'
+                    )
+
+                    with open(f'{TMP_DIR}/diffs/{date}.csv', 'wb') as out:
+                        out.write(gzip.decompress(response.content))
+
+                except Exception as e:
+                    raise AirflowException(f'Failed to download diff for date {date}: {e}', e)
+
+                patch_date -= timedelta(days=1)
+
+        with open(f'{TMP_DIR}/timestamp', 'w') as timestamp:
+            timestamp.write(now.strftime('%Y-%m-%d\n'))
+
+    get_timestamp = HdfsGetFileOperator(
+        task_id='get-timestamp',
+        hdfs_conn_id='hdfs',
+        remote_file=f'{RAW_DIRECTORY_PATH}/timestamp',
+        local_file=f'{TMP_DIR}/timestamp',
+    )
+
+    download = PythonOperator(
+        task_id='download-diffs',
+        python_callable=download_since_last_timestamp,
+        dag=dag
+    )
+
+    put_diffs = HdfsPutFilesOperator(
+        task_id='put-diffs',
+        hdfs_conn_id='hdfs',
+        local_path=f'{TMP_DIR}/diffs',
+        remote_path=f'{RAW_DIRECTORY_PATH}/diffs',
+        dag=dag
+    )
+
+    update_timestamp = put_timestamp('update-timestamp', dag)
+
+    get_timestamp >> download >> put_diffs >> update_timestamp
+
+    return get_timestamp, update_timestamp
 
 
 # noinspection PyShadowingNames
@@ -43,7 +124,7 @@ def initial_data(dag):
     download_complete_data = HttpDownloadOperator(
         task_id='download-complete-data',
         download_uri=f'https://opencellid.org/ocid/downloads?'
-                     f'token={Variable.get("OPEN_CELL_ID_API_KEY")}'
+                     f'token={OPEN_CELL_API_KEY}'
                      f'&type=full'
                      f'&file=cell_towers.csv.gz',
         save_to=f'{TMP_DIR}/cell_towers.csv.gz',
@@ -72,23 +153,17 @@ def initial_data(dag):
         dag=dag
     )
 
-    put_timestamp = HdfsPutFileOperator(
-        task_id='put-timestamp',
-        hdfs_conn_id='hdfs',
-        local_file=f'{TMP_DIR}/timestamp',
-        remote_file=f'{RAW_DIRECTORY_PATH}/timestamp',
-        dag=dag
-    )
+    put_initial_timestamp = put_timestamp('put-initial-timestamp', dag)
 
     create_timestamp_file >> download_complete_data >> unzip_complete_data >> create_raw_target_directories >> \
-    put_initial_data >> put_timestamp
+    put_initial_data >> put_initial_timestamp
 
-    return create_timestamp_file, put_timestamp
+    return create_timestamp_file, put_initial_timestamp
 
 
 with cell_coverage_dag() as dag:
     check_for_initial_data = HdfsGetFileOperator(
-        task_id='load-initial-data',
+        task_id='check-for-initial-data',
         hdfs_conn_id='hdfs',
         remote_file=f'{RAW_DIRECTORY_PATH}/cell_towers.csv',
         local_file='/dev/null',
@@ -104,14 +179,20 @@ with cell_coverage_dag() as dag:
         bash_command=f'mkdir -p {TMP_DIR}',
     )
 
-    clear_tmp_dir = ClearDirectoryOperator(
+    clear_tmp_dir = BashOperator(
         task_id='clear-tmp-dir',
-        directory=TMP_DIR,
-        pattern='*'
+        bash_command=f'rm -rf {TMP_DIR}/*',
     )
 
+    download_all_diffs = DummyOperator(
+        task_id=f'download-remaining-diffs',
+        trigger_rule=TriggerRule.ALL_SUCCESS,
+    )
+
+    create_tmp_dir >> clear_tmp_dir >> check_for_initial_data >> [download_initial_data, download_all_diffs]
+
     download_initial_start, download_initial_end = initial_data(dag)
-
-    create_tmp_dir >> clear_tmp_dir >> check_for_initial_data >> download_initial_data
-
     download_initial_data >> download_initial_start
+
+    download_diffs_start, download_diffs_end = download_diffs(dag)
+    download_all_diffs >> download_diffs_start
