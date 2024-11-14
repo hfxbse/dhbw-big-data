@@ -3,6 +3,7 @@ import os
 
 import requests
 from airflow import DAG, AirflowException
+from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
 from airflow.models import Variable
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.dummy_operator import DummyOperator
@@ -37,6 +38,7 @@ RAW_DIRECTORY_PATH = '/user/hadoop/cell-coverage/raw'
 DIFF_DIRECTORY_PATH = f'{RAW_DIRECTORY_PATH}/diffs'
 TMP_DIR = '/tmp/cell-coverage'
 OPEN_CELL_API_KEY = Variable.get("OPEN_CELL_ID_API_KEY")
+SPARK_APPLICATIONS = '/home/airflow/airflow/python'
 
 
 # noinspection PyShadowingNames
@@ -189,10 +191,18 @@ with cell_coverage_dag() as dag:
         trigger_rule=TriggerRule.ALL_SUCCESS,
     )
 
+    parse_initial_data = SparkSubmitOperator(
+        task_id='parse-initial-data',
+        conn_id='spark',
+        application=f'{SPARK_APPLICATIONS}/init_data.py',
+        verbose=True
+    )
+
     create_tmp_dir >> clear_tmp_dir >> check_for_initial_data >> [download_initial_data, download_all_diffs]
 
     download_initial_start, download_initial_end = initial_data(dag)
     download_initial_data >> download_initial_start
+    download_initial_end >> parse_initial_data
 
     download_diffs_start, download_diffs_end = download_diffs(dag)
     download_all_diffs >> download_diffs_start
