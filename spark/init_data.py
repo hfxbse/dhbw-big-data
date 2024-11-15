@@ -6,7 +6,10 @@ HADOOP_BASE_PATH = '/user/hadoop/cell-coverage'
 RAW_DIRECTORY_PATH = f'{HADOOP_BASE_PATH}/raw'
 FINAL_DIRECTORY_PATH = f'{HADOOP_BASE_PATH}/final'
 TABLE_NAME = 'cell_towers'
-TECHNOLOGIES = ['CDMA', 'GSM', 'UMTS', 'LTE', 'NR']
+
+# Would be the CDMA American equivalent to GSM
+#                2G,    3G,     4G,    5G
+TECHNOLOGIES = ['GSM', 'UMTS', 'LTE', 'NR']
 
 
 def spark_reader():
@@ -34,8 +37,10 @@ def spark_reader():
 
 
 def spark_writer(frame, override=False):
+    values = ', '.join([f"'{technology}'" for technology in TECHNOLOGIES])
+
     mode = 'overwrite' if override else 'append'
-    frame = frame.select("radio", "lat", "lon", "range")
+    frame = frame.select("radio", "lat", "lon", "range").filter(f'radio IN ({values})')
 
     frame.printSchema()
     frame.count()
