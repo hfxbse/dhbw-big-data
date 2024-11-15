@@ -198,6 +198,13 @@ with cell_coverage_dag() as dag:
         verbose=True
     )
 
+    parse_diffs = SparkSubmitOperator(
+        task_id='parse-diffs',
+        conn_id='spark',
+        application=f'{SPARK_APPLICATIONS}/diffs.py',
+        verbose=True
+    )
+
     create_tmp_dir >> clear_tmp_dir >> check_for_initial_data >> [download_initial_data, download_all_diffs]
 
     download_initial_start, download_initial_end = initial_data(dag)
@@ -206,3 +213,4 @@ with cell_coverage_dag() as dag:
 
     download_diffs_start, download_diffs_end = download_diffs(dag)
     download_all_diffs >> download_diffs_start
+    download_diffs_end >> parse_diffs
