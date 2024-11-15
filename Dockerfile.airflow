@@ -6,6 +6,7 @@ RUN wget https://jdbc.postgresql.org/download/postgresql-42.7.4.jar -P  /home/ai
 RUN mv /tmp/upstream/exercises/winter_semester_2024-2025/05_airflow/plugins /home/airflow/airflow
 RUN mv /tmp/upstream/exercises/winter_semester_2024-2025/05_airflow/dags /home/airflow/airflow
 RUN mv /tmp/upstream/exercises/winter_semester_2024-2025/05_airflow/python /home/airflow/airflow
-COPY src/ /home/airflow/airflow/
+COPY airflow/ /home/airflow/airflow/
+COPY spark/ /home/airflow/airflow/python/
 RUN chown -R airflow /home/airflow/airflow
 RUN rm -r /tmp/upstream
