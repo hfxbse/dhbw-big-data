@@ -4,6 +4,12 @@ services:
       context: ./frontend
     ports:
       - "3030:3000"
+    environment:
+      # https://node-postgres.com/features/connecting#environment-variables
+      - USER=postgres
+      - PGHOST=user-db
+    depends_on:
+      - user-db
 
   user-db:
     image: postgres:16-alpine
