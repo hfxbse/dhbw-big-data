@@ -24,8 +24,10 @@ services:
     build:
       dockerfile: Dockerfile.airflow
     depends_on:
-      - hadoop
-      - user-db
+      user-db:
+        condition: service_started
+      hadoop:
+        condition: service_healthy
     ports:
       - "22:22"
       - "8080:8080"
