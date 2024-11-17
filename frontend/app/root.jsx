@@ -5,6 +5,10 @@ import {
   Scripts,
 } from "@remix-run/react";
 
+import "./global.css"
+import styles from "./root.module.css";
+import Footer from "./components/Footer.jsx";
+
 export default function App() {
   return (
     <html>
@@ -12,8 +16,9 @@ export default function App() {
         <Meta />
         <Links />
       </head>
-      <body>
+      <body className={styles.layout}>
         <Outlet />
+        <Footer/>
 
         <Scripts />
       </body>
