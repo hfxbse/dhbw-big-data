@@ -1,22 +1,27 @@
 import {MapContainer, TileLayer, Marker, Popup, useMapEvents} from 'react-leaflet'
 import {useState, useEffect} from "react";
 
-function LocationMarker({onChange}) {
+function LocationMarker({onChange, initialPosition}) {
     const [position, setPosition] = useState(null)
     const map = useMapEvents({
         click: changePosition,
         locationfound: changePosition,
     })
 
-    function changePosition(event) {
+    function changePosition(event, notify = true) {
         setPosition(event.latlng)
         map.flyTo(event.latlng, map.getZoom())
 
-        onChange({lat: event.latlng.lat, lon: event.latlng.lng})
+        if (notify) onChange({lat: event.latlng.lat, lon: event.latlng.lng})
     }
 
     useEffect(() => {
-        map.locate()
+        !initialPosition ? map.locate() : changePosition({
+            latlng: {
+                lat: initialPosition.lat,
+                lng: initialPosition.lon
+            },
+        }, false)
     }, [])
 
     return position === null ? null : (
@@ -26,7 +31,7 @@ function LocationMarker({onChange}) {
     )
 }
 
-export default function Map({className, onLocationChange}) {
+export default function Map({className, initialPosition, onLocationChange}) {
     return <MapContainer
         className={className}
         center={[48.775556, 9.182778]}
@@ -38,6 +43,6 @@ export default function Map({className, onLocationChange}) {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <LocationMarker onChange={onLocationChange}/>
+        <LocationMarker initialPosition={initialPosition} onChange={onLocationChange}/>
     </MapContainer>
 }

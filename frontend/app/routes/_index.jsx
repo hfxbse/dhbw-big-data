@@ -1,5 +1,5 @@
 import pg from 'pg'
-import {useLoaderData} from "@remix-run/react";
+import {useLoaderData, useNavigate, useSearchParams} from "@remix-run/react";
 import CoverageChecker from "../components/CoverageChecker.jsx";
 
 async function countReachableCellTowers({db, position, radio}) {
@@ -46,10 +46,24 @@ export async function loader({request}) {
 
     db.end();
 
-    return {gsm, umts, lte, nr};
+    return {position, cellTowerCount: {gsm, umts, lte, nr}};
 }
 
 export default function Page() {
     const data = useLoaderData()
-    return <CoverageChecker cellTowerCount={data}/>
+    const navigate = useNavigate();
+
+    function reload(position) {
+        const search = new URLSearchParams(position)
+        navigate({
+            pathname: ".",
+            search: `?${search.toString()}`
+        })
+    }
+
+    return <CoverageChecker
+        initialPosition={data?.position}
+        cellTowerCount={data?.cellTowerCount}
+        onLocationChange={reload}
+    />
 }
