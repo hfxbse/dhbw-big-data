@@ -22,7 +22,9 @@
     "isbot": "^4.4.0",
     "pg": "^8.13.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-leaflet": "^4.2.1",
+    "remix-utils": "^7.7.0"
   },
   "devDependencies": {
     "@remix-run/dev": "^2.14.0",
