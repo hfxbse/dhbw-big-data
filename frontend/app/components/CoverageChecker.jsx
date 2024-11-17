@@ -8,11 +8,11 @@ import 'leaflet/dist/images/marker-shadow.png'
 import CellTowerCount from "./CellTowerCount.jsx";
 
 
-export default function CoverageChecker({initialPosition, cellTowerCount, onLocationChange}) {
+export default function CoverageChecker({position, cellTowerCount, onLocationChange}) {
     return <div className={styles.layout}>
         <ClientOnly>{() => <Map
             className={styles.map}
-            initialPosition={initialPosition}
+            position={position}
             onLocationChange={onLocationChange}
         />}</ClientOnly>
         <CellTowerCount className={styles.results} counts={cellTowerCount}/>

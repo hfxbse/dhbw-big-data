@@ -62,7 +62,7 @@ export default function Page() {
     }
 
     return <CoverageChecker
-        initialPosition={data?.position}
+        position={data?.position}
         cellTowerCount={data?.cellTowerCount}
         onLocationChange={reload}
     />

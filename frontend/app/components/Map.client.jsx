@@ -17,37 +17,37 @@ const MarkerIcon = L.icon({
     shadowSize: [41, 41],
 });
 
-function LocationMarker({onChange, initialPosition}) {
-    const [position, setPosition] = useState(null)
+function LocationMarker({onChange, position}) {
+    const [location, setLocation] = useState(null)
     const map = useMapEvents({
         click: changePosition,
         locationfound: changePosition,
     })
 
     function changePosition(event, notify = true) {
-        setPosition(event.latlng)
+        setLocation(event.latlng)
         map.flyTo(event.latlng, map.getZoom())
 
         if (notify) onChange({lat: event.latlng.lat, lon: event.latlng.lng})
     }
 
     useEffect(() => {
-        !initialPosition ? map.locate() : changePosition({
+        !position ? map.locate() : changePosition({
             latlng: {
-                lat: initialPosition.lat,
-                lng: initialPosition.lon
+                lat: position.lat,
+                lng: position.lon
             },
         }, false)
-    }, [])
+    }, [position])
 
-    return position === null ? null : (
-        <Marker position={position} icon={MarkerIcon}>
+    return location === null ? null : (
+        <Marker position={location} icon={MarkerIcon}>
             <Popup>You are here</Popup>
         </Marker>
     )
 }
 
-export default function Map({className, initialPosition, onLocationChange}) {
+export default function Map({className, position, onLocationChange}) {
     return <MapContainer
         className={className}
         center={[48.775556, 9.182778]}
@@ -59,6 +59,6 @@ export default function Map({className, initialPosition, onLocationChange}) {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <LocationMarker initialPosition={initialPosition} onChange={onLocationChange}/>
+        <LocationMarker position={position} onChange={onLocationChange}/>
     </MapContainer>
 }
