@@ -56,7 +56,7 @@ def put_timestamp(task_id, dag):
 def download_diffs(dag):
     def download_since_last_timestamp():
         now = datetime.now()
-        patch_date = now
+        patch_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
         with open(f'{TMP_DIR}/timestamp', 'r') as timestamp:
             update_time = datetime.strptime(timestamp.read(), '%Y-%m-%d\n')
@@ -64,7 +64,7 @@ def download_diffs(dag):
         os.makedirs(f'{TMP_DIR}/diffs', exist_ok=True)
 
         with open(f'{TMP_DIR}/diffs/updates', 'w') as dates:
-            while patch_date > (update_time + timedelta(days=1)):
+            while patch_date > update_time:
                 date = patch_date.strftime('%Y-%m-%d')
                 dates.writelines(f'{date}\n')
 
