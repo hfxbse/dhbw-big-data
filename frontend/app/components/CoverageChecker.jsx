@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css'
 import 'leaflet/dist/images/marker-icon.png'
 import 'leaflet/dist/images/marker-icon-2x.png'
 import 'leaflet/dist/images/marker-shadow.png'
+import CellTowerCount from "./CellTowerCount.jsx";
 
 
 export default function CoverageChecker({initialPosition, cellTowerCount, onLocationChange}) {
@@ -14,8 +15,6 @@ export default function CoverageChecker({initialPosition, cellTowerCount, onLoca
             initialPosition={initialPosition}
             onLocationChange={onLocationChange}
         />}</ClientOnly>
-        <pre className={styles.results}>
-            {JSON.stringify(cellTowerCount, null, 2)}
-        </pre>
+        <CellTowerCount className={styles.results} counts={cellTowerCount}/>
     </div>
 }
