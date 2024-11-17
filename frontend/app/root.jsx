@@ -13,11 +13,12 @@ export default function App() {
   return (
     <html>
       <head>
-        <Meta />
-        <Links />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+          <Meta/>
+          <Links/>
       </head>
       <body className={styles.layout}>
-        <Outlet />
+      <Outlet />
         <Footer/>
 
         <Scripts />
