@@ -142,7 +142,7 @@ def initial_data(dag):
     )
 
     create_raw_target_directories = HdfsMkdirFileOperator(
-        task_id='create_raw_target_directories',
+        task_id='create-raw-target-directories',
         hdfs_conn_id='hdfs',
         directory=DIFF_DIRECTORY_PATH,
         dag=dag
