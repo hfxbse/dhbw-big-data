@@ -203,3 +203,6 @@ cython_debug/
 # Airflow Container Stuff
 AIRFLOW_CONNECTIONS_ALREADY_INITIALIZED
 CONTAINER_ALREADY_INITIALIZED
+
+*.csv
+*.parquet

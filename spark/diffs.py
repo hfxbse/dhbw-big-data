@@ -1,6 +1,7 @@
-from pyspark.sql.types import StructField, StructType, DateType
+from pyspark.sql.types import DateType
 
-from spark_io import spark_session, spark_reader, spark_writer, RAW_DIRECTORY_PATH
+from spark_io import *
+from spark_io import final_columns
 
 DIFF_DIRECTORY_PATH = f'{RAW_DIRECTORY_PATH}/diffs'
 
@@ -15,29 +16,22 @@ if __name__ == "__main__":
 
     dates = [row.date.strftime('%Y-%m-%d') for row in date_rows]
 
-    print(dates)
-
-    raw = spark_reader(session).load(path=[f'{DIFF_DIRECTORY_PATH}/{date}.csv' for date in dates])
+    diffs = calculate_identifier(
+        spark_raw_reader(session).load(path=[f'{DIFF_DIRECTORY_PATH}/{date}.csv' for date in dates])
+    )
 
     # Only keep the last update for a specific sender
-    last_update_dates = raw.groupBy([
-        raw.radio,
-        raw.mcc,
-        raw.net,
-        raw.area,
-        raw.cell,
-        raw.lat,
-        raw.lon
-    ]).agg({"updated": "max"}).withColumnRenamed("max(updated)", "last_updated")
+    last_update_dates = diffs.groupBy([
+        diffs.identifier
+    ]).agg({'updated': 'max'}).withColumnRenamed('max(updated)', 'last_updated')
 
-    frame = raw.join(last_update_dates, [
-        "radio",
-        "mcc",
-        "net",
-        "area",
-        "cell",
-        "lat",
-        "lon"
-    ]).filter(raw.updated == last_update_dates.last_updated)
+    changes = final_columns(
+        diffs.join(last_update_dates, ['identifier']).filter(diffs.updated == last_update_dates.last_updated)
+    )
 
-    spark_writer(raw, override=False)
+    # Merge with old data
+    previous = spark_final_reader(session)
+    unchanged_identifiers = previous.select(previous.identifier).subtract(changes.select(changes.identifier))
+    unchanged = previous.join(unchanged_identifiers, ['identifier'], how='left_semi')
+
+    spark_writer(unchanged.unionByName(changes), override=True)

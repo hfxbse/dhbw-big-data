@@ -11,11 +11,19 @@ from airflow.operators.http_download_operations import HttpDownloadOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.zip_file_operations import UnzipFileOperator
 from airflow.operators.hdfs_operations import HdfsPutFileOperator, HdfsGetFileOperator, HdfsMkdirFileOperator
-from airflow.operators.hdfs_premium_operations import HdfsPutFilesOperator
+from airflow.operators.hdfs_premium_operations import HdfsPutFilesOperator, HdfsMoveOperator, HdfsDeleteOperator
 from datetime import datetime
 
 from airflow.utils.trigger_rule import TriggerRule
 from future.backports.datetime import timedelta
+
+HADOOP_BASE_PATH = '/user/hadoop/cell-coverage'
+FINAL_DIRECTORY_PATH = f'{HADOOP_BASE_PATH}/final'
+RAW_DIRECTORY_PATH = '/user/hadoop/cell-coverage/raw'
+DIFF_DIRECTORY_PATH = f'{RAW_DIRECTORY_PATH}/diffs'
+TMP_DIRECTORY_PATH = '/tmp/cell-coverage'
+OPEN_CELL_API_KEY = Variable.get("OPEN_CELL_ID_API_KEY")
+SPARK_APPLICATIONS = '/home/airflow/airflow/python'
 
 args = {
     'owner': 'airflow'
@@ -34,19 +42,12 @@ def cell_coverage_dag():
     )
 
 
-RAW_DIRECTORY_PATH = '/user/hadoop/cell-coverage/raw'
-DIFF_DIRECTORY_PATH = f'{RAW_DIRECTORY_PATH}/diffs'
-TMP_DIR = '/tmp/cell-coverage'
-OPEN_CELL_API_KEY = Variable.get("OPEN_CELL_ID_API_KEY")
-SPARK_APPLICATIONS = '/home/airflow/airflow/python'
-
-
 # noinspection PyShadowingNames
 def put_timestamp(task_id, dag):
     return HdfsPutFileOperator(
         task_id=task_id,
         hdfs_conn_id='hdfs',
-        local_file=f'{TMP_DIR}/timestamp',
+        local_file=f'{TMP_DIRECTORY_PATH}/timestamp',
         remote_file=f'{RAW_DIRECTORY_PATH}/timestamp',
         dag=dag
     )
@@ -58,12 +59,12 @@ def download_diffs(dag):
         now = datetime.now()
         patch_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        with open(f'{TMP_DIR}/timestamp', 'r') as timestamp:
+        with open(f'{TMP_DIRECTORY_PATH}/timestamp', 'r') as timestamp:
             update_time = datetime.strptime(timestamp.read(), '%Y-%m-%d\n')
 
-        os.makedirs(f'{TMP_DIR}/diffs', exist_ok=True)
+        os.makedirs(f'{TMP_DIRECTORY_PATH}/diffs', exist_ok=True)
 
-        with open(f'{TMP_DIR}/diffs/updates', 'w') as dates:
+        with open(f'{TMP_DIRECTORY_PATH}/diffs/updates', 'w') as dates:
             while patch_date > update_time:
                 date = patch_date.strftime('%Y-%m-%d')
                 dates.writelines(f'{date}\n')
@@ -76,7 +77,7 @@ def download_diffs(dag):
                         f'file=OCID-diff-cell-export-{date}-T000000.csv.gz'
                     )
 
-                    with open(f'{TMP_DIR}/diffs/{date}.csv', 'wb') as out:
+                    with open(f'{TMP_DIRECTORY_PATH}/diffs/{date}.csv', 'wb') as out:
                         out.write(gzip.decompress(response.content))
 
                 except Exception as e:
@@ -84,14 +85,14 @@ def download_diffs(dag):
 
                 patch_date -= timedelta(days=1)
 
-        with open(f'{TMP_DIR}/timestamp', 'w') as timestamp:
+        with open(f'{TMP_DIRECTORY_PATH}/timestamp', 'w') as timestamp:
             timestamp.write(now.strftime('%Y-%m-%d\n'))
 
     get_timestamp = HdfsGetFileOperator(
         task_id='get-timestamp',
         hdfs_conn_id='hdfs',
         remote_file=f'{RAW_DIRECTORY_PATH}/timestamp',
-        local_file=f'{TMP_DIR}/timestamp',
+        local_file=f'{TMP_DIRECTORY_PATH}/timestamp',
     )
 
     download = PythonOperator(
@@ -103,7 +104,7 @@ def download_diffs(dag):
     put_diffs = HdfsPutFilesOperator(
         task_id='put-diffs',
         hdfs_conn_id='hdfs',
-        local_path=f'{TMP_DIR}/diffs',
+        local_path=f'{TMP_DIRECTORY_PATH}/diffs',
         remote_path=f'{RAW_DIRECTORY_PATH}/diffs',
         dag=dag
     )
@@ -119,7 +120,7 @@ def download_diffs(dag):
 def initial_data(dag):
     create_timestamp_file = BashOperator(
         task_id=f'create-timestamp-file',
-        bash_command=f'date --iso-8601 >> {TMP_DIR}/timestamp',
+        bash_command=f'date --iso-8601 >> {TMP_DIRECTORY_PATH}/timestamp',
         dag=dag
     )
 
@@ -129,14 +130,14 @@ def initial_data(dag):
                      f'token={OPEN_CELL_API_KEY}'
                      f'&type=full'
                      f'&file=cell_towers.csv.gz',
-        save_to=f'{TMP_DIR}/cell_towers.csv.gz',
+        save_to=f'{TMP_DIRECTORY_PATH}/cell_towers.csv.gz',
         dag=dag
     )
 
     unzip_complete_data = UnzipFileOperator(
         task_id='unzip-complete-data',
-        zip_file=f'{TMP_DIR}/cell_towers.csv.gz',
-        extract_to=f'{TMP_DIR}/cell_towers.csv',
+        zip_file=f'{TMP_DIRECTORY_PATH}/cell_towers.csv.gz',
+        extract_to=f'{TMP_DIRECTORY_PATH}/cell_towers.csv',
         dag=dag
     )
 
@@ -150,7 +151,7 @@ def initial_data(dag):
     put_initial_data = HdfsPutFileOperator(
         task_id='put-initial-data',
         hdfs_conn_id='hdfs',
-        local_file=f'{TMP_DIR}/cell_towers.csv',
+        local_file=f'{TMP_DIRECTORY_PATH}/cell_towers.csv',
         remote_file=f'{RAW_DIRECTORY_PATH}/cell_towers.csv',
         dag=dag
     )
@@ -178,12 +179,12 @@ with cell_coverage_dag() as dag:
 
     create_tmp_dir = BashOperator(
         task_id='create-tmp-dir',
-        bash_command=f'mkdir -p {TMP_DIR}',
+        bash_command=f'mkdir -p {TMP_DIRECTORY_PATH}',
     )
 
     clear_tmp_dir = BashOperator(
         task_id='clear-tmp-dir',
-        bash_command=f'rm -rf {TMP_DIR}/*',
+        bash_command=f'rm -rf {TMP_DIRECTORY_PATH}/*',
     )
 
     download_all_diffs = DummyOperator(
@@ -198,11 +199,39 @@ with cell_coverage_dag() as dag:
         verbose=True
     )
 
+    move_previous = HdfsMoveOperator(
+        task_id='move-previous',
+        hdfs_conn_id='hdfs',
+        path=FINAL_DIRECTORY_PATH,
+        new_path=TMP_DIRECTORY_PATH,
+        trigger_rule=TriggerRule.ALL_DONE
+    )
+
     parse_diffs = SparkSubmitOperator(
         task_id='parse-diffs',
         conn_id='spark',
         application=f'{SPARK_APPLICATIONS}/diffs.py',
-        verbose=True
+        verbose=True,
+    )
+
+    delete_left_overs = HdfsDeleteOperator(
+        task_id='delete-left-overs',
+        hdfs_conn_id='hdfs',
+        path=FINAL_DIRECTORY_PATH,
+        trigger_rule=TriggerRule.ALL_FAILED
+    )
+
+    restore_previous = HdfsMoveOperator(
+        task_id='restore-previous',
+        hdfs_conn_id='hdfs',
+        path=TMP_DIRECTORY_PATH,
+        new_path=FINAL_DIRECTORY_PATH
+    )
+
+    delete_tmp_dir = HdfsDeleteOperator(
+        task_id='delete-tmp-previous',
+        hdfs_conn_id='hdfs',
+        path=TMP_DIRECTORY_PATH,
     )
 
     create_tmp_dir >> clear_tmp_dir >> check_for_initial_data >> [download_initial_data, download_all_diffs]
@@ -213,4 +242,4 @@ with cell_coverage_dag() as dag:
 
     download_diffs_start, download_diffs_end = download_diffs(dag)
     download_all_diffs >> download_diffs_start
-    download_diffs_end >> parse_diffs
+    download_diffs_end >> delete_tmp_dir >> move_previous >> parse_diffs >> delete_left_overs >> restore_previous

@@ -1,10 +1,12 @@
 import pyspark
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DoubleType
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import hash
 
 HADOOP_BASE_PATH = '/user/hadoop/cell-coverage'
 RAW_DIRECTORY_PATH = f'{HADOOP_BASE_PATH}/raw'
 FINAL_DIRECTORY_PATH = f'{HADOOP_BASE_PATH}/final'
+TMP_DIRECTORY_PATH = f'/tmp/cell-coverage'
 TABLE_NAME = 'cell_towers'
 
 # Would be the CDMA American equivalent to GSM
@@ -16,7 +18,7 @@ def spark_session():
     return SparkSession(pyspark.SparkContext())
 
 
-def spark_reader(session):
+def spark_raw_reader(session):
     return session.read.format('csv').options(
         header='true',
         delimiter=',',
@@ -40,11 +42,32 @@ def spark_reader(session):
     ]))
 
 
+def spark_final_reader(session):
+    return session.read.parquet(TMP_DIRECTORY_PATH)
+
+
+def calculate_identifier(frame):
+    return frame.withColumn('identifier', hash(
+        frame.radio,
+        frame.mcc,
+        frame.net,
+        frame.area,
+        frame.cell,
+        frame.unit,
+        frame.changeable,
+        frame.created,
+    ))
+
+
+def final_columns(frame):
+    return frame.select('identifier', 'radio', 'lat', 'lon', 'range')
+
+
 def spark_writer(frame, override=False):
     values = ', '.join([f"'{technology}'" for technology in TECHNOLOGIES])
 
     mode = 'overwrite' if override else 'append'
-    frame = frame.select('radio', 'lat', 'lon', 'range').filter(f'radio IN ({values})')
+    frame = final_columns(frame).filter(f'radio IN ({values})')
 
     frame.printSchema()
     frame.count()

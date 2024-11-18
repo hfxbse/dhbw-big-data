@@ -4,6 +4,14 @@ from hooks.hdfs_hook import HdfsHook
 
 
 class HdfsPremiumHook(HdfsHook):
+    def delete(self, path):
+        conn = self.get_conn()
+        return conn.delete(path, recursive=True)
+
+    def move(self, path, new_path):
+        conn = self.get_conn()
+        return conn.rename(path, new_path)
+
     def put_files(self, local_path, remote_path):
         """
         Put local files to HDFS (hadoop fs -put...)
