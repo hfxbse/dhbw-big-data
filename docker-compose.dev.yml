@@ -1,0 +1,20 @@
+services:
+  user-db:
+    ports:
+      - "5432:5432"
+
+  hadoop:
+    build:
+      dockerfile: Dockerfile.hadoop
+    ports:
+      - "9864:9864"
+      - "10000:10000"
+      - "8032:8032"
+      - "8030:8030"
+      - "8031:8031"
+      - "9000:9000"
+      - "8888:8888"
+
+  airflow:
+    ports:
+      - "22:22"

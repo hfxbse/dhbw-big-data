@@ -13,8 +13,6 @@ services:
 
   user-db:
     image: postgres:16-alpine
-    ports:
-      - "5432:5432"
     environment:
       - POSTGRES_HOST_AUTH_METHOD=trust
 
@@ -24,13 +22,6 @@ services:
     ports:
       - "8088:8088"
       - "9870:9870"
-      - "9864:9864"
-      - "10000:10000"
-      - "8032:8032"
-      - "8030:8030"
-      - "8031:8031"
-      - "9000:9000"
-      - "8888:8888"
 
   airflow:
     build:
@@ -41,5 +32,4 @@ services:
       hadoop:
         condition: service_healthy
     ports:
-      - "22:22"
       - "8080:8080"
