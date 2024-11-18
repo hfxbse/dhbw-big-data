@@ -18,14 +18,14 @@ services:
 
   hadoop:
     build:
-      dockerfile: Dockerfile.hadoop
+      dockerfile: hadoop.Dockerfile
     ports:
       - "8088:8088"
       - "9870:9870"
 
   airflow:
     build:
-      dockerfile: Dockerfile.airflow
+      dockerfile: airflow.Dockerfile
     depends_on:
       user-db:
         condition: service_started

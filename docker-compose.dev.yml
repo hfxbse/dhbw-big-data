@@ -4,8 +4,6 @@ services:
       - "5432:5432"
 
   hadoop:
-    build:
-      dockerfile: Dockerfile.hadoop
     ports:
       - "9864:9864"
       - "10000:10000"
