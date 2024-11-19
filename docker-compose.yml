@@ -42,3 +42,6 @@ services:
         condition: service_started
       hadoop:
         condition: service_healthy
+    environment:
+      - HADOOP_HOST=hadoop
+      - SPARK_HOST=airflow    # Define the address under which spark is reachable externally
