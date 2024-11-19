@@ -6,6 +6,8 @@ from spark_io import final_columns
 DIFF_DIRECTORY_PATH = f'{RAW_DIRECTORY_PATH}/diffs'
 
 if __name__ == "__main__":
+    db_config = get_database_arguments()
+
     session = spark_session()
     date_rows = session.read.format('csv').options(
         header='false',
@@ -34,4 +36,4 @@ if __name__ == "__main__":
     unchanged_identifiers = previous.select(previous.identifier).subtract(changes.select(changes.identifier))
     unchanged = previous.join(unchanged_identifiers, ['identifier'], how='left_semi')
 
-    spark_writer(unchanged.unionByName(changes), override=True)
+    spark_writer(unchanged.unionByName(changes), postgres_config=db_config)

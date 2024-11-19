@@ -11,8 +11,9 @@ RUN wget https://jdbc.postgresql.org/download/postgresql-42.7.4.jar -P  /home/ai
 RUN mv /tmp/upstream/exercises/winter_semester_2024-2025/05_airflow/plugins /home/airflow/airflow
 RUN mv /tmp/upstream/exercises/winter_semester_2024-2025/05_airflow/dags /home/airflow/airflow
 RUN mv /tmp/upstream/exercises/winter_semester_2024-2025/05_airflow/python /home/airflow/airflow
-RUN sed -i 's/hadoop:/${HADOOP_HOST}:/g' /home/airflow/hadoop/etc/hadoop/core-site.xml
-RUN sed -i 's/hadoop:/${HADOOP_HOST}:/g' /home/airflow/hadoop/etc/hadoop/yarn-site.xml
+# Pyarrow fails to interperet placeholder, subsitute instead
+RUN sed -i "34 i sed -i 's/hadoop:/$HADOOP_HOST:/g' /home/airflow/hadoop/etc/hadoop/core-site.xml" /startup.sh
+RUN sed -i "34 i sed -i 's/hadoop:/$HADOOP_HOST:/g' /home/airflow/hadoop/etc/hadoop/yarn-site.xml" /startup.sh
 # Setting AIRFLOW__WEBSERVER__BASE_URL did not get applied for unknown reasons, update the config file instead
 RUN sed -i "34 i sed -i 's#base_url = http://localhost:8080#base_url = http://localhost:8080/airflow#' /home/airflow/airflow/airflow.cfg" /startup.sh
 

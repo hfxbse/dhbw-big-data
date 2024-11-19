@@ -29,6 +29,13 @@ args = {
     'owner': 'airflow'
 }
 
+postgres_connection_args = [
+    '--postgres-user', Variable.get("POSTGRES_USER", default_var='postgres'),
+    '--postgres-port', Variable.get("POSTGRES_POST", default_var='5432'),
+    '--postgres-host', Variable.get("POSTGRES_HOST", default_var="user-db"),
+    '--postgres-password', Variable.get("POSTGRES_PASSWORD", default_var="password"),
+]
+
 
 def cell_coverage_dag():
     return DAG(
@@ -196,6 +203,7 @@ with cell_coverage_dag() as dag:
         task_id='parse-initial-data',
         conn_id='spark',
         application=f'{SPARK_APPLICATIONS}/init_data.py',
+        application_args=postgres_connection_args,
         verbose=True
     )
 
@@ -211,6 +219,7 @@ with cell_coverage_dag() as dag:
         task_id='parse-diffs',
         conn_id='spark',
         application=f'{SPARK_APPLICATIONS}/diffs.py',
+        application_args=postgres_connection_args,
         verbose=True,
     )
 

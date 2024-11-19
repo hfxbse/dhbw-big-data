@@ -1,3 +1,5 @@
+import argparse
+
 import pyspark
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DoubleType
 from pyspark.sql import SparkSession
@@ -63,10 +65,19 @@ def final_columns(frame):
     return frame.select('identifier', 'radio', 'lat', 'lon', 'range')
 
 
-def spark_writer(frame, override=False):
+def get_database_arguments(parser=argparse.ArgumentParser()):
+    parser.add_argument("--postgres-user", default='postgres')
+    parser.add_argument("--postgres-port", default='5432')
+    parser.add_argument("--postgres-host", required=True)
+    parser.add_argument("--postgres-password", required=True)
+
+    return parser.parse_args()
+
+
+def spark_writer(frame, postgres_config):
     values = ', '.join([f"'{technology}'" for technology in TECHNOLOGIES])
 
-    mode = 'overwrite' if override else 'append'
+    mode = 'overwrite'
     frame = final_columns(frame).filter(f'radio IN ({values})')
 
     frame.printSchema()
@@ -80,11 +91,11 @@ def spark_writer(frame, override=False):
     ).partitionBy('radio').saveAsTable('cell_towers')
 
     frame.write.format('jdbc').options(
-        url='jdbc:postgresql://user-db:5432/postgres',
+        url=f'jdbc:postgresql://{postgres_config.postgres_host}:{postgres_config.postgres_port}/{postgres_config.postgres_user}',
         driver='org.postgresql.Driver',
         dbtable=TABLE_NAME,
-        user='postgres',
-        password='password',
+        user=postgres_config.postgres_user,
+        password=postgres_config.postgres_password,
         createTableOptions=
         f'PARTITION BY LIST (radio);' + ' '.join([
             f"CREATE TABLE {TABLE_NAME}_{technology} PARTITION OF {TABLE_NAME} FOR VALUES IN ('{technology}');"
