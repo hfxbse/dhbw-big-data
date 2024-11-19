@@ -1,9 +1,19 @@
 services:
+  reverse-proxy:
+    build:
+      context: ./nginx
+    ports:
+      - "8080:8080"
+    depends_on:
+      - frontend
+      - airflow
+    environment:
+      - AIRFLOW=airflow
+      - FRONTEND=frontend
+
   frontend:
     build:
       context: ./frontend
-    ports:
-      - "3030:3000"
     environment:
       # https://node-postgres.com/features/connecting#environment-variables
       - USER=postgres
@@ -31,5 +41,3 @@ services:
         condition: service_started
       hadoop:
         condition: service_healthy
-    ports:
-      - "8080:8080"

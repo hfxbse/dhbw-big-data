@@ -13,6 +13,8 @@ RUN mv /tmp/upstream/exercises/winter_semester_2024-2025/05_airflow/dags /home/a
 RUN mv /tmp/upstream/exercises/winter_semester_2024-2025/05_airflow/python /home/airflow/airflow
 RUN sed -i 's/hadoop:/${HADOOP_HOST}:/g' /home/airflow/hadoop/etc/hadoop/core-site.xml
 RUN sed -i 's/hadoop:/${HADOOP_HOST}:/g' /home/airflow/hadoop/etc/hadoop/yarn-site.xml
+# Setting AIRFLOW__WEBSERVER__BASE_URL did not get applied for unknown reasons, update the config file instead
+RUN sed -i "34 i sed -i 's#base_url = http://localhost:8080#base_url = http://localhost:8080/airflow#' /home/airflow/airflow/airflow.cfg" /startup.sh
 
 COPY airflow/ /home/airflow/airflow/
 COPY spark/ /home/airflow/airflow/python/

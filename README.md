@@ -17,9 +17,9 @@ The service can be started through [Docker Compose](https://docs.docker.com/comp
 docker-compose up
 ```
 
-After this, the [user application](http://localhost:3030), [airflow](http://localhost:8080),
-[hadoop task overview](http://localhost:8088), and the
-[hadoop file viewer](http://localhost:9870/explorer.html) should be reachable.
+After this, the [user application](http://localhost:8080), [Airflow](http://localhost:8080/airflow/),
+[Hadoop task overview](http://localhost:8088), and the
+[Hadoop file viewer](http://localhost:9870/explorer.html) should be reachable.
 
 If you need to access other services like the frontend application database, make sure to apply the development service
 configuration.
@@ -32,15 +32,16 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
 
 The [ETL](https://en.wikipedia.org/wiki/Extract%2C_transform%2C_load) process is implemented in
 [Airflow](https://airflow.apache.org/).
-The general idea is to check the current state of the data within the Hadoop file system and perform the actions 
+The general idea is to check the current state of the data within the Hadoop file system and perform the actions
 accordingly.
-For example, if the initial full OpenCellID export is already downloaded, download the remaining difference files instead.
+For example, if the initial full OpenCellID export is already downloaded, download the remaining difference files
+instead.
 The state of the data is tracked with a separate timestamp file, which marks the last time the data was gathered.
 
 OpenCellID provides additional attributes for each entry, which are not relevant for the frontend application but are
 required to identify the entries when merging the data states.
 Therefore, those extra attributes are reduced to their hash, providing a unique identifier.
-The final dataset includes only the location and the range of the station, and this identifier. 
+The final dataset includes only the location and the range of the station, and this identifier.
 
 ![Graph of the tasks performed by the workflows](dag-tasks.png)
 

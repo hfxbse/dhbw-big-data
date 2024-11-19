@@ -1,0 +1,26 @@
+name: build-nginx
+run-name: "Build nginx reverse proxy container image"
+on:
+  push:
+    paths:
+      - nginx/**
+
+jobs:
+  build-container-image:
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        name: "Checkout repository"
+
+      - uses: VaultVulp/gp-docker-action@1.6.0
+        name: "Build and upload Docker image"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          image-name: nginx
+          build-context: nginx/
+          dockerfile: nginx/Dockerfile
