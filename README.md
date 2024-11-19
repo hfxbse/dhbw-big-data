@@ -17,7 +17,7 @@ The service can be started through [Docker Compose](https://docs.docker.com/comp
 docker-compose up
 ```
 
-After this, the [user application](http://localhost:8080), [Airflow](http://localhost:8080/airflow/),
+After this, the [user application](http://localhost:5000), [Airflow](http://localhost:5000/airflow/),
 [Hadoop task overview](http://localhost:8088), and the
 [Hadoop file viewer](http://localhost:9870/explorer.html) should be reachable.
 
