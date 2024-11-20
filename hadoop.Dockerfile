@@ -3,6 +3,7 @@ FROM marcelmittelstaedt/spark_base:latest
 LABEL org.opencontainers.image.source=https://github.com/hfxbse/dhbw-big-data
 
 RUN sed -i '44,50 s/^#//' /startup.sh
+RUN sed -i '11 i chown -R hadoop /home/hadoop/hadoopdata' /startup.sh
 RUN head -n -9 /startup.sh > temp.sh ; mv temp.sh /startup.sh
 RUN echo "echo executing hiveserver2; sudo -u hadoop -H sh -c /home/hadoop/hive/bin/hiveserver2" >> /startup.sh
 RUN chmod +x /startup.sh

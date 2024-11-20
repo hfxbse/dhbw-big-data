@@ -24,12 +24,16 @@ services:
 
   user-db:
     image: postgres:16-alpine
+    volumes:
+      - user-db-data:/var/lib/postgresql/data
     environment:
       - POSTGRES_HOST_AUTH_METHOD=trust
 
   hadoop:
     build:
       dockerfile: hadoop.Dockerfile
+    volumes:
+      - hadoop-data:/home/hadoop/hadoopdata
     ports:
       - "8088:8088"
       - "9870:9870"
@@ -37,6 +41,8 @@ services:
   airflow:
     build:
       dockerfile: airflow.Dockerfile
+    volumes:
+      - airflow-db-data:/var/lib/postgresql
     depends_on:
       user-db:
         condition: service_started
@@ -45,3 +51,11 @@ services:
     environment:
       - HADOOP_HOST=hadoop
       - SPARK_HOST=airflow    # Define the address under which spark is reachable externally
+
+volumes:
+  user-db-data:
+    external: false
+  hadoop-data:
+    external: false
+  airflow-db-data:
+    external: false
