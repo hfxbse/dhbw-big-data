@@ -17,6 +17,16 @@ The service can be started through [Docker Compose](https://docs.docker.com/comp
 docker-compose up
 ```
 
+To add your authentication credentials, create and copy the 
+[credential file](https://docs.nginx.com/nginx/admin-guide/security-controls/configuring-http-basic-authentication/) to 
+`/credentials/airflow` inside the nginx container.
+
+```shell
+htpasswd -c credentials admin
+docker exec dhbw-big-data-reverse-proxy-1 mkdir -p /credentials
+docker cp credentials dhbw-big-data-reverse-proxy-1:/credentials/airflow
+```
+
 After this, the [user application](http://localhost:5000), [Airflow](http://localhost:5000/airflow/),
 [Hadoop task overview](http://localhost:8088), and the
 [Hadoop file viewer](http://localhost:9870/explorer.html) should be reachable.

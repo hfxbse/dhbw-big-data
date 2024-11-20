@@ -206,3 +206,5 @@ CONTAINER_ALREADY_INITIALIZED
 
 *.csv
 *.parquet
+
+/credentials
