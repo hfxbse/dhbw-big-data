@@ -13,6 +13,7 @@ export default function App() {
   return (
     <html>
       <head>
+          <title>Cell Coverage Checker</title>
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
           <Meta/>
           <Links/>
